@@ -9,27 +9,56 @@ def fix_name(name_part):
     name_part = name_part.strip()
     
     # Если имя и фамилия слитно (например, ИванИванов или петрпетров)
-    if ' ' not in name_part:
-        # Для кириллицы: ищем заглавные буквы как разделители
+    if ' ' not in name_part and len(name_part) > 1:
+        # Пытаемся разделить по заглавным буквам
         parts = re.findall('[А-ЯЁ][а-яё]*', name_part)
         
-        # Если не нашли по заглавным (всё в нижнем регистре), пробуем разделить пополам
+        # Если не нашли заглавные (всё в нижнем регистре), ищем переход от буквы к букве
         if len(parts) < 2:
-            # Для строки типа "петрпетров" - предполагаем, что имя и фамилия равной длины
-            mid = len(name_part) // 2
-            parts = [name_part[:mid], name_part[mid:]]
+            # Для русских имён: ищем возможную границу (обычно имя короче фамилии)
+            # Пробуем разные варианты разделения
+            best_parts = None
+            best_score = 0
+            
+            # Пробуем разделить на разных позициях (от 2 до len-2)
+            for split_pos in range(2, len(name_part) - 1):
+                first = name_part[:split_pos]
+                second = name_part[split_pos:]
+                
+                # Проверяем, что обе части выглядят как слова (только буквы)
+                if first.isalpha() and second.isalpha():
+                    # Оцениваем: имя обычно 4-6 букв, фамилия 5-10
+                    score = 0
+                    if 3 <= len(first) <= 7:
+                        score += 1
+                    if 4 <= len(second) <= 12:
+                        score += 1
+                    # Предпочитаем равномерное разделение
+                    score += 1 / (abs(len(first) - len(second)) + 1)
+                    
+                    if score > best_score:
+                        best_score = score
+                        best_parts = [first, second]
+            
+            if best_parts:
+                parts = best_parts
+            else:
+                # Если не нашли хорошего разделения, делим пополам
+                mid = len(name_part) // 2
+                parts = [name_part[:mid], name_part[mid:]]
         
         if len(parts) >= 2:
-            name_part = ' '.join(parts)
+            name_part = ' '.join(parts[:2])
     
     # Приводим к формату с заглавными буквами
     words = name_part.split()
     if len(words) >= 2:
-        words[0] = words[0].capitalize()
-        words[1] = words[1].capitalize()
+        # Делаем первую букву заглавной, остальные строчными
+        words[0] = words[0][0].upper() + words[0][1:].lower() if words[0] else ''
+        words[1] = words[1][0].upper() + words[1][1:].lower() if words[1] else ''
         return ' '.join(words[:2])
     elif len(words) == 1:
-        return words[0].capitalize()
+        return words[0][0].upper() + words[0][1:].lower() if words[0] else ''
     return ''
 
 def fix_age(age_part):
@@ -44,8 +73,6 @@ def fix_age(age_part):
         # Проверяем диапазон 0-120
         if 0 <= int(age) <= 120:
             return age
-        # Если возраст вне диапазона, возвращаем пустую строку
-        return ''
     return ''
 
 def fix_phone(phone_part):
@@ -64,22 +91,25 @@ def fix_phone(phone_part):
     if phone_digits.startswith('8'):
         phone_digits = '7' + phone_digits[1:]
     
-    # Если номер не начинается с 7 и не 10-значный, пробуем добавить 7
+    # Если номер не начинается с 7 и 10-значный, добавляем 7
     if not phone_digits.startswith('7') and len(phone_digits) == 10:
         phone_digits = '7' + phone_digits
+    
+    # Если номер не начинается с 7 и не 10-значный, пробуем взять последние 10 цифр
+    if not phone_digits.startswith('7') and len(phone_digits) > 10:
+        phone_digits = '7' + phone_digits[-10:]
     
     # Проверяем минимальную длину
     if len(phone_digits) < 10:
         return ''
     
-    # Если цифр больше 11, берем последние 11 (или 10, если не начинается с 7)
+    # Если цифр больше 11, берем последние 11
     if len(phone_digits) > 11:
-        # Проверяем, есть ли код страны
-        if phone_digits[0] == '7' or phone_digits[0] == '8':
+        # Проверяем, есть ли код страны в начале
+        if phone_digits[0] == '7':
             phone_digits = phone_digits[:11]
         else:
-            phone_digits = phone_digits[-10:]
-            phone_digits = '7' + phone_digits
+            phone_digits = '7' + phone_digits[-10:]
     
     # Форматируем 11-значный номер
     if len(phone_digits) == 11 and phone_digits[0] == '7':
@@ -99,12 +129,19 @@ def fix_email(email_part):
     # Исправляем @@ на @
     email = email.replace('@@', '@')
     
-    # Исправляем двойные точки
-    while '..' in email:
-        email = email.replace('..', '.')
+    # Исправляем двойные точки (но не в домене)
+    parts = email.split('@')
+    if len(parts) == 2:
+        local = parts[0]
+        domain = parts[1]
+        # Убираем двойные точки в локальной части и домене
+        while '..' in local:
+            local = local.replace('..', '.')
+        while '..' in domain:
+            domain = domain.replace('..', '.')
+        email = f"{local}@{domain}"
     
     # Удаляем недопустимые символы, но сохраняем @ и точку
-    # Разрешаем: буквы, цифры, @, ., _, -
     clean_chars = []
     for char in email:
         if char.isalnum() or char in '@._-':
@@ -112,18 +149,19 @@ def fix_email(email_part):
     email = ''.join(clean_chars)
     
     # Проверяем базовый формат email
-    # Локальная часть: может содержать буквы, цифры, точки, _, -
-    # Домен: буквы, цифры, точки, дефисы, обязательно точка и зона 2+ букв
     match = re.match(r'^[a-zA-Z0-9][a-zA-Z0-9._-]*@[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$', email)
     if match:
         return email
     
-    # Если не прошёл валидацию, возвращаем пустую строку
     return ''
 
 def process_line(line):
     """Обрабатывает одну строку и возвращает исправленную"""
-    parts = line.strip().split('|')
+    line = line.strip()
+    if not line:
+        return "||||"  # Возвращаем 4 пустых поля для пустой строки
+    
+    parts = line.split('|')
     
     # Дополняем до 4 полей
     while len(parts) < 4:
@@ -146,9 +184,8 @@ def main():
         
         with open(output_file, 'w', encoding='utf-8') as f:
             for line in lines:
-                if line.strip():
-                    corrected_line = process_line(line)
-                    f.write(corrected_line + '\n')
+                corrected_line = process_line(line)
+                f.write(corrected_line + '\n')
         
         print(f"Готово! Результат сохранён в {output_file}")
     
