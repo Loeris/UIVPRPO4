@@ -35,6 +35,7 @@ jobs:
 
     - name: Install dependencies (additional)
       run: |
+        conda init
         conda activate data-validator-env
         pip install --upgrade pip
         # Если есть requirements.txt, можно установить
