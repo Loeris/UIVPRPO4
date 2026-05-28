@@ -22,7 +22,6 @@ def fix_name(name_part):
     return ''
 
 def fix_age(age_part):
-    """Исправляет возраст: оставляет только цифры"""
     if not age_part or age_part.strip() == '':
         return ''
     
@@ -34,7 +33,6 @@ def fix_age(age_part):
     return ''
 
 def fix_phone(phone_part):
-    """Исправляет номер телефона к формату +7 (XXX) XXX-XX-XX"""
     if not phone_part or phone_part.strip() == '':
         return ''
     
@@ -54,16 +52,33 @@ def fix_phone(phone_part):
         return f"+{phone_digits[0]} ({phone_digits[1:4]}) {phone_digits[4:7]}-{phone_digits[7:9]}-{phone_digits[9:11]}"
     return ''
 
+def fix_email(email_part):
+    if not email_part or email_part.strip() == '':
+        return ''
+    
+    email = email_part.strip().lower()
+    
+    email = email.replace('@@', '@')
+    email = re.sub(r'\.{2,}', '.', email)
+    email = re.sub(r'[^a-zA-Z0-9@._-]', '', email)
+    
+    match = re.match(r'^[a-zA-Z0-9][a-zA-Z0-9._-]*@[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$', email)
+    if match:
+        return email
+    return ''
+
 def process_line(line):
     parts = line.strip().split('|')
+    
     while len(parts) < 4:
         parts.append('')
     
     fixed_name = fix_name(parts[0])
     fixed_age = fix_age(parts[1])
     fixed_phone = fix_phone(parts[2])
+    fixed_email = fix_email(parts[3] if len(parts) > 3 else '')
     
-    return f"{fixed_name}|{fixed_age}|{fixed_phone}|{parts[3]}"
+    return f"{fixed_name}|{fixed_age}|{fixed_phone}|{fixed_email}"
 
 def main():
     input_file = 'input.txt'
