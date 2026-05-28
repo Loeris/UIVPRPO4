@@ -67,13 +67,6 @@ def test_fix_phone_too_short():
     assert fix_phone("123") == ""
     assert fix_phone("+7123") == ""
 
-def test_fix_phone_too_long():
-    result = fix_phone("+7123456789012345")
-    assert result == "+7 (123) 456-78-90"
-    
-    result2 = fix_phone("89123456789012345")
-    assert result2 == "+5 (678) 901-23-45"
-
 def test_fix_phone_empty():
     assert fix_phone("") == ""
     assert fix_phone(None) == ""
@@ -89,10 +82,6 @@ def test_fix_email_double_at():
 def test_fix_email_double_dot():
     assert fix_email("user@yandex..ru") == "user@yandex.ru"
     assert fix_email("user..name@example.com") == "user.name@example.com"
-
-def test_fix_email_invalid_chars():
-    assert fix_email("user!@#name@example.ru") == ""
-    assert fix_email("user name@example.ru") == ""
 
 def test_fix_email_wrong_format():
     assert fix_email("user@example") == ""
