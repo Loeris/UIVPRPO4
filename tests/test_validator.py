@@ -2,7 +2,6 @@ import pytest
 import sys
 import os
 
-# Добавляем корневую директорию проекта в sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from main import fix_name, fix_age, fix_phone, fix_email, process_line
@@ -15,8 +14,12 @@ def test_fix_name_normal():
 
 def test_fix_name_merged():
     assert fix_name("ИванИванов") == "Иван Иванов"
-    assert fix_name("петрпетров") == "Петр Петров"  # Исправлено
+    assert fix_name("петрпетров") == "Петр Петров"
     assert fix_name("АннаСмирнова") == "Анна Смирнова"
+
+def test_fix_name_single():
+    assert fix_name("Анна") == "Анна"
+    assert fix_name("анна") == "Анна"
 
 def test_fix_name_empty():
     assert fix_name("") == ""
@@ -42,8 +45,8 @@ def test_fix_age_with_garbage():
     assert fix_age("+99") == "99"
 
 def test_fix_age_out_of_range():
-    assert fix_age("150") == ""   # больше 120
-    assert fix_age("-5") == ""    # отрицательное
+    assert fix_age("150") == ""
+    assert fix_age("-5") == ""
     assert fix_age("abc") == ""
 
 def test_fix_age_empty():
@@ -65,13 +68,10 @@ def test_fix_phone_too_short():
     assert fix_phone("+7123") == ""
 
 def test_fix_phone_too_long():
-    # Извлекаем последние 11 цифр для номера с кодом страны
     result = fix_phone("+7123456789012345")
-    # Должен взять последние 11 цифр: 71234567890 -> +7 (123) 456-78-90
     assert result == "+7 (123) 456-78-90"
     
     result2 = fix_phone("89123456789012345")
-    # Последние 11 цифр: 91234567890 -> +7 (123) 456-78-90
     assert result2 == "+7 (912) 345-67-89"
 
 def test_fix_phone_empty():
@@ -116,9 +116,14 @@ def test_process_line_partial_correction():
 
 def test_process_line_all_empty():
     line = "|||"
-    expected = "||||"  # Четыре пустых поля с разделителями
+    expected = "||||"
     result = process_line(line)
     assert result == expected
+
+def test_process_line_empty_string():
+    line = ""
+    expected = "||||"
+    assert process_line(line) == expected
 
 def test_process_line_missing_fields():
     line = "Иван|30"
