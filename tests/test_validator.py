@@ -4,7 +4,7 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from main import fix_name, fix_age, fix_phone, fix_email, process_line
+from data_validator import fix_name, fix_age, fix_phone, fix_email, process_line
 
 # ----- Тесты для fix_name -----
 def test_fix_name_normal():
