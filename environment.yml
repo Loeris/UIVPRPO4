@@ -5,6 +5,7 @@ channels:
 dependencies:
   - python=3.10
   - pip
-  - pip:
-    - pytest
-    - flake8
+  - flake8
+  - pytest
+  - pytest-cov
+  - coveralls
